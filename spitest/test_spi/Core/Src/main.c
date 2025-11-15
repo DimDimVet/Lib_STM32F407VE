@@ -125,7 +125,7 @@ uint8_t str[32];
 //uint8_t *str = _str;
 sprintf((char*)str,"ID: %x", Read_ID());
 HAL_UART_Transmit(&huart1,str, 20, 1000);
-	
+
 sprintf((char*)str,"JEDEC: %x", Read_JEDEC());
 HAL_UART_Transmit(&huart1,str, 20, 1000);
 
@@ -151,6 +151,8 @@ HAL_UART_Transmit(&huart1,str, 20, 1000);
 
 sprintf((char*)str,"SR1: %02x", Read_SR1());
 HAL_UART_Transmit(&huart1,str, 20, 1000);
+
+HAL_UART_Receive_IT(&huart1,str, 20);
 
 WriteDisable();
 
