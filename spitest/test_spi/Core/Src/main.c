@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stdio.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -26,18 +26,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-#define W25_CSL HAL_GPIO_WritePin(F_CS_GPIO_Port, F_CS_Pin, GPIO_PIN_RESET);
-#define W25_CSH HAL_GPIO_WritePin(F_CS_GPIO_Port, F_CS_Pin, GPIO_PIN_SET);
-//#define RAM_CSH HAL_GPIO_WritePin(RAM_CS_GPIO_Port, PE2, GPIO_PIN_SET);
-//#define RAM_CSL HAL_GPIO_WritePin(RAM_CS_GPIO_Port, PE2, GPIO_PIN_RESET);
-#define READ 0x03
-#define WRITE 0x02
-#define WRITE_EN 0x06
-#define WRITE_DS 0x04
-#define ERASE_SEC 0x20
-#define SR1_READ 0x05
-#define ID_READ 0x90
-#define JEDEC_READ 0x9f
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -53,9 +42,6 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
-SPI_HandleTypeDef hspi3;
-DMA_HandleTypeDef hdma_spi1_rx;
-DMA_HandleTypeDef hdma_spi1_tx;
 
 UART_HandleTypeDef huart1;
 
@@ -66,19 +52,11 @@ UART_HandleTypeDef huart1;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
-static void MX_SPI3_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-uint16_t Read_ID(void);
-uint32_t Read_JEDEC(void);
-uint8_t Read_SR1(void);
-void Read_Page(uint32_t addr,uint8_t *rData);
-void WriteEnable(void);
-void WriteDisable(void);
-void Write_Page(uint32_t addr,uint8_t *wData);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -115,56 +93,22 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
-  MX_SPI3_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-uint8_t str[32];
-//uint8_t *str = _str;
-sprintf((char*)str,"ID: %x", Read_ID());
-HAL_UART_Transmit(&huart1,str, 20, 1000);
-
-sprintf((char*)str,"JEDEC: %x", Read_JEDEC());
-HAL_UART_Transmit(&huart1,str, 20, 1000);
-
-//uint8_t buffer[256];
-//Read_Page(0,&buffer[0]);
-//sprintf((char*)str,"%02x %02x %02x %02x %02x %02x %02x %02x %02x",
-//buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6],buffer[7],buffer[8]);
-//HAL_UART_Transmit(&huart1,str, 20, 1000);
-
-
+	uint8_t *tst;
 	
-
-//////////
-
-//WriteEnable();
-//for(uint16_t i=0;i<256;i++)
-//{buffer[i]=0xff;}
-//buffer[0]=0x55;
-//buffer[1]=0xff;
-//buffer[2]=0x00;
-//buffer[3]=0xAA;
-//Write_Page(0,&buffer[0]);
-
-sprintf((char*)str,"SR1: %02x", Read_SR1());
-HAL_UART_Transmit(&huart1,str, 20, 1000);
-
-HAL_UART_Receive_IT(&huart1,str, 20);
-
-WriteDisable();
-
-//Read_Page(0,&buffer[0]);
-
-//sprintf((char*)str,"%02x %02x %02x %02x %02x %02x %02x %02x %02x",
-//buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6],buffer[7],buffer[8]);
-//HAL_UART_Transmit(&huart1,str, 20, 1000);
+	tst = (uint8_t*)"TST";
+	HAL_UART_Transmit(&huart1,tst,3,1000);
   /* USER CODE END 2 */
 
+	NVIC_SetPriority(USART1_IRQn, 2);	  // Установите приоритет
+	NVIC_EnableIRQ(USART1_IRQn);		  // Разрешить прерывания для USART2
+		
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	
   while (1)
   {
     /* USER CODE END WHILE */
@@ -196,7 +140,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 132;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -213,7 +157,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
@@ -295,44 +239,6 @@ static void MX_SPI2_Init(void)
 }
 
 /**
-  * @brief SPI3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_SPI3_Init(void)
-{
-
-  /* USER CODE BEGIN SPI3_Init 0 */
-
-  /* USER CODE END SPI3_Init 0 */
-
-  /* USER CODE BEGIN SPI3_Init 1 */
-
-  /* USER CODE END SPI3_Init 1 */
-  /* SPI3 parameter configuration*/
-  hspi3.Instance = SPI3;
-  hspi3.Init.Mode = SPI_MODE_MASTER;
-  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
-  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi3.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN SPI3_Init 2 */
-
-  /* USER CODE END SPI3_Init 2 */
-
-}
-
-/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -355,32 +261,13 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_HalfDuplex_Init(&huart1) != HAL_OK)
+  if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
-  * Enable DMA controller clock
-  */
-static void MX_DMA_Init(void)
-{
-
-  /* DMA controller clock enable */
-  __HAL_RCC_DMA2_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-  /* DMA2_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 
 }
 
@@ -416,92 +303,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-uint16_t Read_ID(void)
-{uint8_t temp[4]={0,};
-W25_CSL;
-temp[0]=ID_READ;
-HAL_SPI_Transmit(&hspi1,temp,4,1);
-while (HAL_SPI_GetState(&hspi1)!=HAL_SPI_STATE_READY) {__NOP();}
-HAL_SPI_Receive(&hspi1,temp,2,1);
-W25_CSH;
-return ((temp[0]<<8)|temp[1]);
-}
 
-uint32_t Read_JEDEC(void)
-{uint8_t temp[4]={0,};
-W25_CSL;
-temp[0]=JEDEC_READ;
-HAL_SPI_Transmit(&hspi1,temp,1,1);
-while (HAL_SPI_GetState(&hspi1)!=HAL_SPI_STATE_READY) {__NOP();}
-HAL_SPI_Receive(&hspi1,temp,3,1);
-W25_CSH;
-return ((temp[0]<<16)|(temp[1]<<8)|temp[2]);
-}
-
-uint8_t Read_SR1(void)
-{uint8_t temp[1];
-W25_CSL;
-temp[0]=SR1_READ;
-HAL_SPI_Transmit(&hspi1,temp,1,1);
-while (HAL_SPI_GetState(&hspi1)!=HAL_SPI_STATE_READY) {__NOP();}
-HAL_SPI_Receive(&hspi1,temp,1,1);
-W25_CSH;
-return temp[0];
-}
-void Read_Page(uint32_t addr,uint8_t *rData)
-{uint8_t temp[4]={0,};
-while(Read_SR1()&1) {__NOP();}
-W25_CSL;
-temp[0]=READ;
-temp[1]=(addr>>16)&0xff;
-temp[2]=(addr>>8)&0xff;
-temp[3]=addr&0xff;
-HAL_SPI_Transmit(&hspi1,temp,4,1);
-while (HAL_SPI_GetState(&hspi1)!=HAL_SPI_STATE_READY) {__NOP();}
-HAL_SPI_Receive(&hspi1,rData,256,1);
-W25_CSH;
-}
-
-void WriteEnable(void)
-{uint8_t temp[1];
-W25_CSL;
-temp[0]=WRITE_EN;
-HAL_SPI_Transmit(&hspi1,temp,1,1);
-W25_CSH;
-}
-void WriteDisable(void)
-{uint8_t temp[1];
-W25_CSL;
-temp[0]=WRITE_DS;
-HAL_SPI_Transmit(&hspi1,temp,1,1);
-W25_CSH;
-}
-void Write_Page(uint32_t addr,uint8_t *wData)
-{uint8_t temp[4]={0,};
-while(Read_SR1()&1) {__NOP();}
-W25_CSL;
-temp[0]=WRITE;
-temp[1]=(addr>>16)&0xff;
-temp[2]=(addr>>8)&0xff;
-temp[3]=addr&0xff;
-HAL_SPI_Transmit(&hspi1,temp,4,1);
-HAL_SPI_Transmit(&hspi1,wData,256,1);
-while (HAL_SPI_GetState(&hspi1)!=HAL_SPI_STATE_READY) {__NOP();}
-W25_CSH;
-}
-
-void EraseSec(uint32_t addr)
-{uint8_t temp[4]={0,};
-while(Read_SR1()&1) {__NOP();}
-//W25_CSL;
-temp[0]=ERASE_SEC;
-temp[1]=(addr>>16)&0xff;
-temp[2]=(addr>>8)&0xff;
-temp[3]=addr&0xff;
-HAL_SPI_Transmit(&hspi1,temp,4,1);
-W25_CSH;
-HAL_Delay(1);
-}
 /* USER CODE END 4 */
 
 /**

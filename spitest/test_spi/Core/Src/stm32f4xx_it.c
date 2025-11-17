@@ -55,11 +55,8 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern DMA_HandleTypeDef hdma_spi1_rx;
-extern DMA_HandleTypeDef hdma_spi1_tx;
 extern SPI_HandleTypeDef hspi1;
 extern SPI_HandleTypeDef hspi2;
-extern SPI_HandleTypeDef hspi3;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
@@ -234,57 +231,34 @@ void SPI2_IRQHandler(void)
 /**
   * @brief This function handles USART1 global interrupt.
   */
+
+	uint8_t *tst;
+	
+
+volatile uint8_t received_data = 0;
+
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-
+char *ch;
   /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
+//	HAL_NVIC_ClearPendingIRQ(USART1_IRQn);
+//  HAL_UART_IRQHandler(&huart1);
+	if (USART1->SR & USART_SR_RXNE)
+	{
+		char temp = USART1->DR;
+		
+		ch[0] = temp;
+		HAL_UART_Transmit(&huart1,(uint8_t*)ch,6,1000);
+	}
+
+
+
   /* USER CODE BEGIN USART1_IRQn 1 */
 
+	
+	//__HAL_UART_ENABLE_IT(&huart1, UART_IT_RXNE); // Включаем прерывание по приёму данных
   /* USER CODE END USART1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles SPI3 global interrupt.
-  */
-void SPI3_IRQHandler(void)
-{
-  /* USER CODE BEGIN SPI3_IRQn 0 */
-
-  /* USER CODE END SPI3_IRQn 0 */
-  HAL_SPI_IRQHandler(&hspi3);
-  /* USER CODE BEGIN SPI3_IRQn 1 */
-
-  /* USER CODE END SPI3_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA2 stream0 global interrupt.
-  */
-void DMA2_Stream0_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA2_Stream0_IRQn 0 */
-
-  /* USER CODE END DMA2_Stream0_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_spi1_rx);
-  /* USER CODE BEGIN DMA2_Stream0_IRQn 1 */
-
-  /* USER CODE END DMA2_Stream0_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA2 stream3 global interrupt.
-  */
-void DMA2_Stream3_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA2_Stream3_IRQn 0 */
-
-  /* USER CODE END DMA2_Stream3_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_spi1_tx);
-  /* USER CODE BEGIN DMA2_Stream3_IRQn 1 */
-
-  /* USER CODE END DMA2_Stream3_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
